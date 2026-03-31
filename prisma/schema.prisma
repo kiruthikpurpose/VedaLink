@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  FARMER
+  BUYER
+  EXPORTER
+  LOGISTICS
+  PACKHOUSE
+  ADMIN
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String?  // For simplicity, we just store it
+  name      String
+  role      Role
+  createdAt DateTime @default(now())
+
+  farmerProfile    FarmerProfile?
+  batches          Batch[]           @relation("FarmerBatches")
+  orders           Order[]           @relation("BuyerOrders")
+}
+
+model FarmerProfile {
+  id             String @id @default(uuid())
+  userId         String @unique
+  user           User   @relation(fields: [userId], references: [id])
+  farmName       String
+  location       String
+  totalAreaAcres Float
+}
+
+model Batch {
+  id             String   @id @default(uuid())
+  farmerId       String
+  farmer         User     @relation("FarmerBatches", fields: [farmerId], references: [id])
+  cropType       String
+  quantityKg     Float
+  harvestDate    DateTime
+  status         String   // "CREATED", "GRADED", "IN_TRANSIT", "DELIVERED"
+  qrCodeUrl      String?
+
+  aiGrade        String?
+  aiConfidence   Float?
+  defectTags     String[]
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  orders         Order[]
+  logisticsEvents LogisticsEvent[]
+  exportPassport ExportPassport?
+}
+
+model Order {
+  id          String   @id @default(uuid())
+  batchId     String
+  batch       Batch    @relation(fields: [batchId], references: [id])
+  buyerId     String
+  buyer       User     @relation("BuyerOrders", fields: [buyerId], references: [id])
+  price       Float
+  status      String   // "PENDING", "ACCEPTED", "SHIPPED", "COMPLETED"
+  createdAt   DateTime @default(now())
+
+  escrow      EscrowTransaction?
+}
+
+model EscrowTransaction {
+  id          String   @id @default(uuid())
+  orderId     String   @unique
+  order       Order    @relation(fields: [orderId], references: [id])
+  amount      Float
+  status      String   // "LOCKED", "RELEASED", "REFUNDED"
+  createdAt   DateTime @default(now())
+}
+
+model LogisticsEvent {
+  id          String   @id @default(uuid())
+  batchId     String
+  batch       Batch    @relation(fields: [batchId], references: [id])
+  location    String
+  temperature Float?
+  timestamp   DateTime @default(now())
+  handler     String?
+}
+
+model ExportPassport {
+  id          String   @id @default(uuid())
+  batchId     String   @unique
+  batch       Batch    @relation(fields: [batchId], references: [id])
+  destination String?
+  isCompliant Boolean  @default(false)
+  issuedAt    DateTime @default(now())
+  documents   String[] // Array of URLs
+}
