@@ -1,5 +1,4 @@
 <div align="center">
-  <img src="https://via.placeholder.com/120x120.png?text=VL" alt="VedaLink Logo" width="80" height="80">
   
   # VedaLink
 
